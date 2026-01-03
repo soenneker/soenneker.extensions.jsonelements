@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics.Contracts;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
-using Soenneker.Utils.Json;
 
 namespace Soenneker.Extensions.JsonElements;
 
@@ -37,6 +37,7 @@ public static class JsonElementsExtension
     /// <param name="element">The <see cref="JsonElement"/> to inspect.</param>
     /// <returns><c>true</c> if the element is <see cref="JsonValueKind.Null"/> or <see cref="JsonValueKind.Undefined"/>; otherwise, <c>false</c>.</returns>
     [Pure]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNullOrUndefined(this JsonElement element)
     {
         return element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined;
@@ -57,9 +58,22 @@ public static class JsonElementsExtension
     /// Supports string values containing a valid ISO 8601 date-time format.
     /// </summary>
     [Pure]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DateTime ToDateTime(this JsonElement element)
     {
         return element.GetDateTime();
+    }
+
+    /// <summary>
+    /// Converts the specified JSON element to a <see cref="DateTimeOffset"/> value.
+    /// </summary>
+    /// <param name="element">The <see cref="JsonElement"/> containing a date and time value to convert.</param>
+    /// <returns>A <see cref="DateTimeOffset"/> representation of the date and time value contained in the JSON element.</returns>
+    [Pure]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static DateTimeOffset ToDateTimeOffset(this JsonElement element)
+    {
+        return element.GetDateTimeOffset();
     }
 
     /// <summary>
@@ -70,6 +84,7 @@ public static class JsonElementsExtension
     /// <param name="element">The <see cref="JsonElement"/> to extract the string from.</param>
     /// <returns>The string representation of the element.</returns>
     [Pure]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ToStr(this JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.String)
@@ -87,6 +102,9 @@ public static class JsonElementsExtension
     [Pure]
     public static T? To<T>(this JsonElement element)
     {
-        return JsonUtil.Deserialize<T>(element.GetRawText());
+        if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+            return default;
+
+        return element.Deserialize<T>(JsonSerializerOptions.Web);
     }
 }
