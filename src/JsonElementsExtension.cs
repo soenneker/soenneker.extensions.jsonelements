@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -25,11 +26,11 @@ public static class JsonElementsExtension
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int ToInt(this JsonElement element)
     {
-        if (TryGetInt32(element, out var value))
+        if (TryGetInt32(element, out int value))
             return value;
 
         ThrowFormat("int", element);
-        return default;
+        return 0;
     }
 
     /// <summary>
@@ -39,11 +40,11 @@ public static class JsonElementsExtension
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ToBool(this JsonElement element)
     {
-        if (TryGetBoolean(element, out var value))
+        if (TryGetBoolean(element, out bool value))
             return value;
 
         ThrowFormat("bool", element);
-        return default;
+        return false;
     }
 
     /// <summary>
@@ -53,19 +54,19 @@ public static class JsonElementsExtension
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Guid ToGuid(this JsonElement element)
     {
-        if (element.ValueKind == JsonValueKind.String && element.TryGetGuid(out var guid))
+        if (element.ValueKind == JsonValueKind.String && element.TryGetGuid(out Guid guid))
             return guid;
 
         // Also accept raw string if someone encoded weirdly (still no allocation).
         if (element.ValueKind == JsonValueKind.String)
         {
-            var s = element.GetString();
-            if (s is not null && Guid.TryParse(s, out var parsed))
+            string? s = element.GetString();
+            if (s is not null && Guid.TryParse(s, out Guid parsed))
                 return parsed;
         }
 
         ThrowFormat("Guid", element);
-        return default;
+        return Guid.Empty;
     }
 
     /// <summary>
@@ -75,14 +76,14 @@ public static class JsonElementsExtension
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DateTime ToDateTime(this JsonElement element)
     {
-        if (element.ValueKind == JsonValueKind.String && element.TryGetDateTime(out var dt))
+        if (element.ValueKind == JsonValueKind.String && element.TryGetDateTime(out DateTime dt))
             return dt;
 
         // Fallback (still may allocate because GetString() returns a string from the document)
         if (element.ValueKind == JsonValueKind.String)
         {
-            var s = element.GetString();
-            if (s is not null && DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+            string? s = element.GetString();
+            if (s is not null && DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime parsed))
                 return parsed;
         }
 
@@ -97,13 +98,13 @@ public static class JsonElementsExtension
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DateTimeOffset ToDateTimeOffset(this JsonElement element)
     {
-        if (element.ValueKind == JsonValueKind.String && element.TryGetDateTimeOffset(out var dto))
+        if (element.ValueKind == JsonValueKind.String && element.TryGetDateTimeOffset(out DateTimeOffset dto))
             return dto;
 
         if (element.ValueKind == JsonValueKind.String)
         {
-            var s = element.GetString();
-            if (s is not null && DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+            string? s = element.GetString();
+            if (s is not null && DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset parsed))
                 return parsed;
         }
 
@@ -182,13 +183,70 @@ public static class JsonElementsExtension
 
         if (element.ValueKind == JsonValueKind.String)
         {
-            var s = element.GetString();
+            string? s = element.GetString();
             if (s is not null && Guid.TryParse(s, out value))
                 return true;
         }
 
-        value = default;
+        value = Guid.Empty;
         return false;
+    }
+
+    /// <summary>
+    /// Converts a JSON element to a corresponding .NET object representation.
+    /// </summary>
+    /// <remarks>This method recursively converts the structure of the JSON element. Property names are
+    /// preserved as dictionary keys, and array elements are converted to a list. Numeric values are returned as Int64
+    /// when possible, otherwise as Double.</remarks>
+    /// <param name="element">The JSON element to convert.</param>
+    /// <returns>A .NET object representing the JSON value. Returns a dictionary for JSON objects, a list for arrays, a string
+    /// for string values, a numeric type for numbers, a Boolean for true or false, or null for null or undefined
+    /// values.</returns>
+    [Pure]
+    public static object? JsonElementToObject(this JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+            {
+                // JsonElement doesn't expose property-count cheaply.
+                // Still: avoid LINQ and ToDictionary allocations.
+                var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
+
+                foreach (JsonProperty p in element.EnumerateObject())
+                    dict[p.Name] = p.Value.JsonElementToObject();
+
+                return dict;
+            }
+
+            case JsonValueKind.Array:
+            {
+                int len = element.GetArrayLength();
+                var list = new List<object?>(len);
+
+                foreach (JsonElement item in element.EnumerateArray())
+                    list.Add(item.JsonElementToObject());
+
+                return list;
+            }
+
+            case JsonValueKind.String:
+                return element.GetString();
+
+            case JsonValueKind.Number:
+                return element.TryGetInt64(out long i) ? i : element.GetDouble();
+
+            case JsonValueKind.True:
+                return true;
+
+            case JsonValueKind.False:
+                return false;
+
+            case JsonValueKind.Null:
+            case JsonValueKind.Undefined:
+            default:
+                return null;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -199,12 +257,12 @@ public static class JsonElementsExtension
 
         if (element.ValueKind == JsonValueKind.String)
         {
-            var s = element.GetString();
+            string? s = element.GetString();
             if (s is not null)
                 return int.TryParse(s, _intStyles, CultureInfo.InvariantCulture, out value);
         }
 
-        value = default;
+        value = 0;
         return false;
     }
 
@@ -225,12 +283,12 @@ public static class JsonElementsExtension
 
         if (element.ValueKind == JsonValueKind.String)
         {
-            var s = element.GetString();
+            string? s = element.GetString();
             if (s is not null)
                 return bool.TryParse(s, out value);
         }
 
-        value = default;
+        value = false;
         return false;
     }
 
