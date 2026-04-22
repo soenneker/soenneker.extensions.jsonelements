@@ -1,11 +1,10 @@
-﻿using Soenneker.Tests.Unit;
-using Xunit;
+using Soenneker.Tests.Unit;
 
 namespace Soenneker.Extensions.JsonElements.Tests;
 
 public sealed class JsonElementExtensionTests : UnitTest
 {
-    [Fact]
+    [Test]
     public void Default()
     {
 
