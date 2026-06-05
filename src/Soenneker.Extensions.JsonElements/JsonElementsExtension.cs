@@ -167,14 +167,32 @@ public static class JsonElementsExtension
         return element.Deserialize<T>(JsonSerializerOptions.Web);
     }
 
+    /// <summary>
+    /// Attempts to execute to int.
+    /// </summary>
+    /// <param name="element">The element.</param>
+    /// <param name="value">The value.</param>
+    /// <returns>A value indicating whether the operation succeeded.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryToInt(this JsonElement element, out int value)
         => TryGetInt32(element, out value);
 
+    /// <summary>
+    /// Attempts to execute to bool.
+    /// </summary>
+    /// <param name="element">The element.</param>
+    /// <param name="value">The value.</param>
+    /// <returns>A value indicating whether the operation succeeded.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryToBool(this JsonElement element, out bool value)
         => TryGetBoolean(element, out value);
 
+    /// <summary>
+    /// Attempts to execute to guid.
+    /// </summary>
+    /// <param name="element">The element.</param>
+    /// <param name="value">The value.</param>
+    /// <returns>A value indicating whether the operation succeeded.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryToGuid(this JsonElement element, out Guid value)
     {
