@@ -15,6 +15,7 @@ public static class JsonElementsExtension
     private const NumberStyles _intStyles = NumberStyles.Integer;
 
     /// <summary>True if element is Null or Undefined.</summary>
+    /// <returns>True if element is Null or Undefined.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNullOrUndefined(this JsonElement element)
         => element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined;
@@ -23,6 +24,7 @@ public static class JsonElementsExtension
     /// Fast int conversion. Supports JSON numbers and numeric strings.
     /// Throws on invalid input (keeps the "ToX" semantics).
     /// </summary>
+    /// <returns>Fast int conversion. Supports JSON numbers and numeric strings. Throws on invalid input (keeps the "ToX" semantics).</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int ToInt(this JsonElement element)
     {
@@ -37,6 +39,7 @@ public static class JsonElementsExtension
     /// Fast bool conversion. Supports JSON booleans and "true"/"false" strings (case-insensitive).
     /// Throws on invalid input.
     /// </summary>
+    /// <returns>Fast bool conversion. Supports JSON booleans and "true"/"false" strings (case-insensitive). Throws on invalid input.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ToBool(this JsonElement element)
     {
@@ -51,6 +54,7 @@ public static class JsonElementsExtension
     /// Fast Guid conversion. Supports JSON string GUIDs.
     /// Throws on invalid input.
     /// </summary>
+    /// <returns>Fast Guid conversion. Supports JSON string GUIDs. Throws on invalid input.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Guid ToGuid(this JsonElement element)
     {
@@ -73,6 +77,7 @@ public static class JsonElementsExtension
     /// Fast DateTime conversion. Supports JSON string values (ISO 8601 preferred).
     /// Throws on invalid input.
     /// </summary>
+    /// <returns>Fast DateTime conversion. Supports JSON string values (ISO 8601 preferred). Throws on invalid input.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DateTime ToDateTime(this JsonElement element)
     {
@@ -95,6 +100,7 @@ public static class JsonElementsExtension
     /// Fast DateTimeOffset conversion. Supports JSON string values (ISO 8601 preferred).
     /// Throws on invalid input.
     /// </summary>
+    /// <returns>Fast DateTimeOffset conversion. Supports JSON string values (ISO 8601 preferred). Throws on invalid input.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DateTimeOffset ToDateTimeOffset(this JsonElement element)
     {
@@ -120,6 +126,7 @@ public static class JsonElementsExtension
     /// - Null/Undefined: returns "" (or change to null if you prefer).
     /// - Object/Array: returns raw JSON via GetRawText() (allocates a string, but avoids formatting).
     /// </summary>
+    /// <returns>A string view of the element with minimal work/allocations. - String: returns the JSON string value. - Number: uses TryGetInt64/TryGetDouble to avoid serializing the element. - True/False: returns "true"/"false". - Null/Undefined: returns "" (or change to null if you prefer). - Object/Array: returns raw JSON via GetRawText() (allocates a string, but avoids formatting).</returns>
     [Pure]
     public static string ToStr(this JsonElement element)
     {
@@ -157,6 +164,7 @@ public static class JsonElementsExtension
     /// Note: this can be expensive because it deserializes from the element (often via raw text).
     /// Prefer explicit getters / TryGet methods for primitives.
     /// </summary>
+    /// <returns>Deserializes the element to <typeparamref name="T"/> using Web defaults. Note: this can be expensive because it deserializes from the element (often via raw text). Prefer explicit getters / TryGet methods for primitives.</returns>
     [Pure]
     public static T? To<T>(this JsonElement element)
     {
@@ -168,31 +176,31 @@ public static class JsonElementsExtension
     }
 
     /// <summary>
-    /// Attempts to execute to int.
+    /// Attempts to read a JSON number or numeric string as a 32-bit integer.
     /// </summary>
-    /// <param name="element">The element.</param>
-    /// <param name="value">The value.</param>
-    /// <returns>A value indicating whether the operation succeeded.</returns>
+    /// <param name="element">The JSON element to read.</param>
+    /// <param name="value">Receives the parsed value when conversion succeeds.</param>
+    /// <returns>True when an integer was read successfully.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryToInt(this JsonElement element, out int value)
         => TryGetInt32(element, out value);
 
     /// <summary>
-    /// Attempts to execute to bool.
+    /// Attempts to read a JSON Boolean or Boolean string.
     /// </summary>
-    /// <param name="element">The element.</param>
-    /// <param name="value">The value.</param>
-    /// <returns>A value indicating whether the operation succeeded.</returns>
+    /// <param name="element">The JSON element to read.</param>
+    /// <param name="value">Receives the parsed value when conversion succeeds.</param>
+    /// <returns>True when a Boolean was read successfully.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryToBool(this JsonElement element, out bool value)
         => TryGetBoolean(element, out value);
 
     /// <summary>
-    /// Attempts to execute to guid.
+    /// Attempts to read a JSON string as a GUID.
     /// </summary>
-    /// <param name="element">The element.</param>
-    /// <param name="value">The value.</param>
-    /// <returns>A value indicating whether the operation succeeded.</returns>
+    /// <param name="element">The JSON element to read.</param>
+    /// <param name="value">Receives the parsed value when conversion succeeds.</param>
+    /// <returns>True when a GUID was read successfully.</returns>
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryToGuid(this JsonElement element, out Guid value)
     {
