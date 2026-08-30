@@ -4,7 +4,7 @@
 [![](https://img.shields.io/github/actions/workflow/status/soenneker/soenneker.extensions.jsonelements/codeql.yml?label=CodeQL&style=for-the-badge)](https://github.com/soenneker/soenneker.extensions.jsonelements/actions/workflows/codeql.yml)
 
 # ![](https://user-images.githubusercontent.com/4441470/224455560-91ed3ee7-f510-4041-a8d2-3fc093025112.png) Soenneker.Extensions.JsonElements
-A collection of helpful JsonElement extension methods.
+Strict and non-throwing primitive conversion, string projection, typed deserialization, and recursive object conversion for `JsonElement`.
 
 ## Installation
 
@@ -12,26 +12,59 @@ A collection of helpful JsonElement extension methods.
 dotnet add package Soenneker.Extensions.JsonElements
 ```
 
-## Quick start
+## Read primitive values
 
 ```csharp
 using Soenneker.Extensions.JsonElements;
 
-// Given an existing JsonElement named element:
-var result = element.IsNullOrUndefined();
+using JsonDocument document = JsonDocument.Parse(json);
+JsonElement root = document.RootElement;
+
+int count = root.GetProperty("count").ToInt();
+bool enabled = root.GetProperty("enabled").ToBool();
+Guid id = root.GetProperty("id").ToGuid();
 ```
 
-## Common operations
+The strict converters accept these JSON forms:
 
-- `IsNullOrUndefined()` - True if element is Null or Undefined.
-- `ToInt()` - Fast int conversion. Supports JSON numbers and numeric strings. Throws on invalid input (keeps the "ToX" semantics).
-- `ToBool()` - Fast bool conversion. Supports JSON booleans and "true"/"false" strings (case-insensitive). Throws on invalid input.
-- `ToGuid()` - Fast Guid conversion. Supports JSON string GUIDs. Throws on invalid input.
-- `ToDateTime()` - Fast DateTime conversion. Supports JSON string values (ISO 8601 preferred). Throws on invalid input.
-- `ToDateTimeOffset()` - Fast DateTimeOffset conversion. Supports JSON string values (ISO 8601 preferred). Throws on invalid input.
-- `ToStr()` - Returns a string view of the element with minimal work/allocations. - String: returns the JSON string value. - Number: uses TryGetInt64/TryGetDouble to avoid serializing the element. - True/False: returns "true"/"false". - Null/Undefined: returns "" (or change to null if you prefer). - Object/Array: returns raw JSON via GetRawText() (allocates a string, but avoids formatting).
-- `To()` - Deserializes the element to `T` using Web defaults. Note: this can be expensive because it deserializes from the element (often via raw text). Prefer explicit getters / TryGet methods for primitives.
-- `TryToInt()` - Attempts to read the JSON value as an `int`; returns `false` instead of throwing when it is null or incompatible.
-- `TryToBool()` - Attempts to read the JSON value as a `bool`; returns `false` instead of throwing when it is null or incompatible.
-- `TryToGuid()` - Attempts to read the JSON value as a `Guid`; returns `false` instead of throwing when it is null or malformed.
-- `JsonElementToObject()` - Converts a JSON element to a corresponding .NET object representation. Returns a .NET object representing the JSON value. Returns a dictionary for JSON objects, a list for arrays, a string for string values, a numeric type for numbers, a Boolean for true or false, or null for null or undefined values.
+- `ToInt()` accepts a JSON integer or an invariant-culture integer string within the `Int32` range.
+- `ToBool()` accepts JSON `true`/`false` or a case-insensitive Boolean string.
+- `ToGuid()` accepts a JSON string that `Guid` can parse.
+- `ToDateTime()` and `ToDateTimeOffset()` accept JSON strings, preferring the `System.Text.Json` ISO 8601 parser and then invariant round-trip parsing.
+
+An incompatible kind, malformed value, or out-of-range number throws `FormatException`. Use `TryToInt()`, `TryToBool()`, or `TryToGuid()` when invalid input is expected:
+
+```csharp
+if (root.GetProperty("count").TryToInt(out int count))
+{
+    Process(count);
+}
+```
+
+`IsNullOrUndefined()` distinguishes JSON null/missing-style default elements before conversion.
+
+## Convert to text
+
+```csharp
+string text = element.ToStr();
+```
+
+`ToStr()` returns the decoded value for a JSON string, invariant text for an `Int64`, lowercase text for a Boolean, and an empty string for null or undefined. Decimal/exponent numbers retain their raw JSON token so precision is not lost. Objects and arrays also return their compact raw JSON.
+
+## Deserialize a structured value
+
+```csharp
+OrderDto? order = element.To<OrderDto>();
+```
+
+`To<T>()` uses `JsonSerializerOptions.Web`. Null and undefined return `default`; serialization failures propagate. Prefer the primitive methods above when a complete object deserialization is unnecessary.
+
+## Build ordinary .NET collections
+
+```csharp
+object? value = element.JsonElementToObject();
+```
+
+`JsonElementToObject()` recursively maps objects to `Dictionary<string, object?>`, arrays to `List<object?>`, strings to `string`, Booleans to `bool`, and null/undefined to `null`. Numbers become `long`, then `decimal`, then `double` according to the first representation that fits; a number outside all three ranges is preserved as raw JSON text. When an object contains duplicate property names, the last value wins.
+
+All methods read from the existing `JsonElement`. Keep its owning `JsonDocument` alive for the duration of the call unless the element was cloned.

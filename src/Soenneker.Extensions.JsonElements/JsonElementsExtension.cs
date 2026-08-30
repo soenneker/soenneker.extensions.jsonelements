@@ -136,12 +136,9 @@ public static class JsonElementsExtension
                 return element.GetString()!;
 
             case JsonValueKind.Number:
-                // Prefer integer path when possible (fewer chars, faster).
+                // Normalize integral values while preserving the exact JSON token for other numbers.
                 if (element.TryGetInt64(out long l))
                     return l.ToString(CultureInfo.InvariantCulture);
-                if (element.TryGetDouble(out double d))
-                    return d.ToString("R", CultureInfo.InvariantCulture);
-                // As a last resort, raw json token
                 return element.GetRawText();
 
             case JsonValueKind.True:
@@ -222,8 +219,8 @@ public static class JsonElementsExtension
     /// Converts a JSON element to a corresponding .NET object representation.
     /// </summary>
     /// <remarks>This method recursively converts the structure of the JSON element. Property names are
-    /// preserved as dictionary keys, and array elements are converted to a list. Numeric values are returned as Int64
-    /// when possible, otherwise as Double.</remarks>
+    /// preserved as dictionary keys, and array elements are converted to a list. Numeric values are returned as
+    /// <see cref="long"/>, <see cref="decimal"/>, or <see cref="double"/> when representable; otherwise their raw JSON text is preserved.</remarks>
     /// <param name="element">The JSON element to convert.</param>
     /// <returns>A .NET object representing the JSON value. Returns a dictionary for JSON objects, a list for arrays, a string
     /// for string values, a numeric type for numbers, a Boolean for true or false, or null for null or undefined
@@ -260,7 +257,13 @@ public static class JsonElementsExtension
                 return element.GetString();
 
             case JsonValueKind.Number:
-                return element.TryGetInt64(out long i) ? i : element.GetDouble();
+                if (element.TryGetInt64(out long integer))
+                    return integer;
+                if (element.TryGetDecimal(out decimal decimalValue))
+                    return decimalValue;
+                if (element.TryGetDouble(out double doubleValue))
+                    return doubleValue;
+                return element.GetRawText();
 
             case JsonValueKind.True:
                 return true;
