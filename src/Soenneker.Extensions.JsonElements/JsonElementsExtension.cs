@@ -234,7 +234,7 @@ public static class JsonElementsExtension
             {
                 // JsonElement doesn't expose property-count cheaply.
                 // Still: avoid LINQ and ToDictionary allocations.
-                var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
+                var dict = new Dictionary<string, object?>(element.GetPropertyCount(), StringComparer.Ordinal);
 
                 foreach (JsonProperty p in element.EnumerateObject())
                     dict[p.Name] = p.Value.JsonElementToObject();
