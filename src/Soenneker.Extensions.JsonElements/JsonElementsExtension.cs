@@ -1,4 +1,6 @@
-﻿using System;
+using System.Text.Json.Serialization.Metadata;
+using System.Diagnostics.CodeAnalysis;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Globalization;
@@ -163,6 +165,8 @@ public static class JsonElementsExtension
     /// </summary>
     /// <returns>Deserializes the element to <typeparamref name="T"/> using Web defaults. Note: this can be expensive because it deserializes from the element (often via raw text). Prefer explicit getters / TryGet methods for primitives.</returns>
     [Pure]
+    [RequiresUnreferencedCode("JSON deserialization requires reflection. Use the overload accepting JsonTypeInfo<T> for trimming.")]
+    [RequiresDynamicCode("JSON deserialization may require runtime code generation. Use the overload accepting JsonTypeInfo<T> for Native AOT.")]
     public static T? To<T>(this JsonElement element)
     {
         if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
@@ -170,6 +174,17 @@ public static class JsonElementsExtension
 
         // In .NET 8+ this uses JsonTypeInfo if provided; otherwise it may go through raw text.
         return element.Deserialize<T>(JsonSerializerOptions.Web);
+    }
+
+    /// <summary>
+    /// Deserializes the element with explicit metadata, allowing source-generated metadata in Native AOT applications.
+    /// Null or undefined elements return default.
+    /// </summary>
+    [Pure]
+    public static T? To<T>(this JsonElement element, JsonTypeInfo<T> typeInfo)
+    {
+        ArgumentNullException.ThrowIfNull(typeInfo);
+        return element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined ? default : element.Deserialize(typeInfo);
     }
 
     /// <summary>
